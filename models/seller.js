@@ -14,8 +14,14 @@ const SellerSchema = new mongoose.Schema({
   businessAddress: { type: String, required: true },
   businessType: { type: String, required: true },
   otp: { type: String },
-  loggedIn: { type: String, enum: ['loggedin', 'loggedout'], default: 'loggedout' }
+  loggedIn: { type: String, enum: ['loggedin', 'loggedout'], default: 'loggedout' },
+
+  verified:{ type: Boolean, default: false }, 
+  verificationToken: { type: String, required: false },
 });
+
+const Seller = mongoose.model('Seller', SellerSchema);
+
 
 // Hash password before saving
 SellerSchema.pre('save', async function (next) {

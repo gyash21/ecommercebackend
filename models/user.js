@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const { verify } = require('crypto');
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -7,8 +8,14 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   userId: { type: String, unique: true, required: true }, // Add unique userId
   accountStatus: { type: String, default: 'open' }, // Default account status
-  phone: { type: String, default: 'not available' } // Phone number field with default value
+  phone: { type: String, default: 'not available' }, // Phone number field with default value
+
+  verified:{ type: Boolean, default: false },
+  verificationToken: { type: String, required: false },
 });
+
+
+const User = mongoose.model('User', UserSchema);
 
 // Hash password before saving
 UserSchema.pre('save', async function (next) {
