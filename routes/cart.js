@@ -7,6 +7,7 @@ const User = require('../models/user');
 const Coupon = require('../models/couponmodel'); 
 const Product = require('../models/product'); 
 const nodemailer = require('nodemailer');
+const shiprocket = require('../services/shiprocket');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
@@ -212,6 +213,63 @@ router.post('/apply-coupon', async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Error applying coupon.' });
   }
+});
+
+// entire shipping route
+// Route to get shipping rates
+router.post('/checkout', async (req, res) => {
+  const { cartId, destination } = req.body;
+
+  try {
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+
+    const weight = cart.items.reduce((total, item) => total + item.weight, 0);
+
+    // Get shipping rates
+    const shippingRates = await shiprocket.getShippingRates({
+      origin: 'your-origin-location', // e.g., your warehouse location
+      destination,
+      weight,
+    });
+
+      // Send rates back to the seller
+      res.status(200).json(shippingRates);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error fetching shipping rates' });
+    }
+  });
+// Route to create shipping order (finalizing the checkout)
+router.post('/finalize-checkout', async (req, res) => {
+  const { cartId, shippingOption, shippingDetails } = req.body;
+
+  try {
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+
+    const weight = cart.items.reduce((total, item) => total + item.weight, 0);
+    const orderDetails = {
+      order: {
+        items: cart.items,
+        weight,
+        shippingDetails,
+      },
+      shippingOption,
+    };
+
+
+   // Create shipping order with Shiprocket
+   const shippingOrder = await shiprocket.createShippingOrder(orderDetails);
+   res.status(200).json({ success: true, shippingOrder });
+ } catch (error) {
+   console.error(error);
+   res.status(500).json({ error: 'Error finalizing checkout' });
+ }
 });
 
 module.exports = router;
