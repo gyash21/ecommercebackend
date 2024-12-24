@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const Seller = require('../models/seller'); // Adjust the path to your Seller schema
 const router = express.Router();
+const { checkOwnerRole } = require('../middlewares/roleCheck');
 
 // Seller Login
 router.post('/login', async (req, res) => {
@@ -191,6 +192,21 @@ router.post('/logout', async (req, res) => {
     res.status(500).json({
       error: 'Error logging out',
       details: error.message
+    });
+  }
+});
+
+// Website Owner-Only Route
+router.post('/admin-dashboard', checkOwnerRole, async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: 'Welcome to the admin dashboard, hello Mr Owner!',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error accessing the admin dashboard',
+      details: error.message,
     });
   }
 });

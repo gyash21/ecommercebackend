@@ -49,6 +49,8 @@ app.use(
 );
 
 // Routes
+app.use('/product', productRoutes);
+app.use('/seller', require('./routes/seller'));
 app.use('/auth', authRoutes);
 app.use('/admin', adminAuthRoutes);
 app.use('/cart', cartRoutes);
