@@ -15,6 +15,7 @@ const couponRoutes = require('./routes/coupon')
 const Product = require('./models/product');
 const crypto = require('crypto');
 require('dotenv').config();
+const productRoutes = require('./routes/product');
 
 const app = express();
 
