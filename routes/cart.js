@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Cart = require('../models/cartmodel');
-const Order = require('../models/complaintmodel'); // Replace with correct path
-const User = require('../models/user'); // Replace with correct path
-const Product = require('../models/product'); // Replace with correct path
+const Order = require('../models/complaintmodel'); 
+const User = require('../models/user'); 
+const Coupon = require('../models/couponmodel'); 
+const Product = require('../models/product'); 
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
@@ -150,6 +151,66 @@ router.post('/place-order', async (req, res) => {
     res.status(200).json({ success: true, message: 'Order placed successfully', orderId, trackingId });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error placing order', error: error.message });
+  }
+});
+
+
+
+// Entire coupon applying route
+
+
+// Apply a coupon code
+router.post('/apply-coupon', async (req, res) => {
+  const { cartId, couponCode } = req.body;
+
+  try {
+    // Fetch the coupon from the database
+    const coupon = await Coupon.findOne({ code: couponCode });
+    if (!coupon || coupon.isActive === false) {
+      return res.status(400).json({ error: 'Invalid or expired coupon code.' });
+    }
+
+    // Check if coupon has expired
+    if (coupon.expiryDate < Date.now()) {
+      coupon.isActive = false;
+      await coupon.save();
+      return res.status(400).json({ error: 'Coupon has expired.' });
+    }
+
+    // Check if coupon usage limit has been exceeded
+    if (coupon.usedCount >= coupon.usageLimit) {
+      coupon.isActive = false;
+      await coupon.save();
+      return res.status(400).json({ error: 'Coupon usage limit exceeded.' });
+    }
+
+    // Apply the coupon discount to the cart
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found.' });
+    }
+
+    let discount = 0;
+    if (coupon.discountType === 'percentage') {
+      discount = (coupon.discountValue / 100) * cart.totalAmount;
+    } else if (coupon.discountType === 'fixed') {
+      discount = coupon.discountValue;
+    }
+
+    // Update cart total with discount
+    cart.totalAmount -= discount;
+    cart.couponApplied = couponCode;
+
+    // Increment the usage count of the coupon
+    coupon.usedCount += 1;
+    await coupon.save();
+
+    await cart.save();
+
+    res.status(200).json({ success: true, cart });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error applying coupon.' });
   }
 });
 
