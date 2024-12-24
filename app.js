@@ -16,6 +16,8 @@ const Product = require('./models/product');
 const crypto = require('crypto');
 require('dotenv').config();
 const productRoutes = require('./routes/product');
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user');
 
 const app = express();
 

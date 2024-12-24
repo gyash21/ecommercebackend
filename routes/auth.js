@@ -1,7 +1,9 @@
 const express = require('express');
 const User = require('../models/user');
+const Seller = require('../models/seller');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const { sendVerificationEmail } = require('../utils/email');
 
 
 router.post('/signup', async (req, res) => {
@@ -206,6 +208,55 @@ router.get('/seller/:sellerId', async (req, res) => {
     res.status(500).json({ error: 'Error fetching seller details' });
   }
 });
+
+// Generate verification token
+const verificationToken = crypto.randomBytes(32).toString('hex');
+newSeller.verificationToken = verificationToken;
+
+// Save the seller to the database
+await newSeller.save();
+
+// Send verification email
+await sendVerificationEmail(email, verificationToken);
+
+res.status(201).json({
+  success: true,
+  message: 'Registration successful. Please check your email to verify your account.',
+});
+
+
+// verification process
+
+router.get('/verify-email/:token', async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    // Find the seller or website owner by verification token
+    let seller = await Seller.findOne({ verificationToken: token });
+
+    if (!seller) {
+      const user = await User.findOne({ verificationToken: token });
+      if (user) {
+        seller = user;  // If it's a website owner, treat them as a seller
+      }
+    }
+
+    if (!seller) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    // Verify the seller
+    seller.verified = true;
+    seller.verificationToken = null;  // Clear the token
+    await seller.save();
+
+    res.status(200).json({ success: true, message: 'Email verified successfully!' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to verify email' });
+  }
+});
+
 
 
 module.exports = router;
